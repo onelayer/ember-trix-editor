@@ -1,86 +1,61 @@
 import Ember from 'ember';
 import layout from '../templates/components/trix-editor';
 
-export default Ember.Component.extend({
-  attachmentsDisabled: false,
+const { isPresent } = Ember;
 
-  editor: null,
+let TrixEditor = Ember.Component.extend({
+  layout: layout,
+  attachmentsDisabled: false,
 
   inputId: Ember.computed('elementId',function() {
     return `trix-editor-${this.get('elementId')}`;
   }),
 
-  layout: layout,
+  autofocusOn: Ember.computed('attrs.autofocus', function () {
+    return !!this.attrs.autofocus ? true : null;
+  }),
 
   _listenToTrixEditorActions: Ember.on('didInsertElement', function () {
     const $trixEditor = Ember.$(this.get('element')).find('trix-editor');
 
-    $trixEditor.on('trix-attachment-add', event => {
-      if (this.attrs['trix-attachment-add']) {
-        this.attrs['trix-attachment-add'](event);
-      }
+    TrixEditor.EVENTS.forEach((event) => {
+      return $trixEditor.on(event, e => this._tryEvent(event, e));
     });
 
-    $trixEditor.on('trix-attachment-remove', event => {
-      if (this.attrs['trix-attachment-remove']) {
-        this.attrs['trix-attachment-remove'](event);
-      }
-    });
-
-    $trixEditor.on('trix-blur', event => {
-      if (this.attrs['trix-blur']) {
-        this.attrs['trix-blur'](event);
-      }
-    });
-
-    $trixEditor.on('trix-change', event => {
-      if (this.attrs['trix-change']) {
-        this.attrs['trix-change'](event);
-      }
-    });
-
-    $trixEditor.on('trix-file-accept', event => {
+    $trixEditor.on("trix-file-accept", event => {
       if (this.attrs.attachmentsDisabled) {
         event.preventDefault();
-      }
-
-      if (this.attrs['trix-file-accept']) {
-        this.attrs['trix-file-accept'](event);
-      }
-    });
-
-    $trixEditor.on('trix-focus', event => {
-      if (this.attrs['trix-focus']) {
-        this.attrs['trix-focus'](event);
-      }
-    });
-
-    $trixEditor.on('trix-initialize', event => {
-      if (this.attrs['trix-initialize']) {
-        this.attrs['trix-initialize'](event);
-      }
-    });
-
-    $trixEditor.on('trix-selection-change', event => {
-      if (this.attrs['trix-selection-change']) {
-        this.attrs['trix-selection-change'](event);
+        event.stopImmediatePropagation();
       }
     });
   }),
+
+  _tryEvent(name, event) {
+    let handler = this.attrs[name];
+
+    if (isPresent(handler)) {
+      return handler(event);
+    }
+  },
 
   _removeTrixEditorListeners: Ember.on('willDestroyElement', function () {
     const $trixEditor = Ember.$(this.get('element')).find('trix-editor');
-    $trixEditor.off('trix-attachment-add');
-    $trixEditor.off('trix-attachment-remove');
-    $trixEditor.off('trix-blur');
-    $trixEditor.off('trix-change');
-    $trixEditor.off('trix-file-accept');
-    $trixEditor.off('trix-focus');
-    $trixEditor.off('trix-initialize');
-    $trixEditor.off('trix-selection-change');
-  }),
 
-  autofocusOn: Ember.computed('attrs.autofocus', function () {
-    return !!this.attrs.autofocus ? true : null;
+    TrixEditor.EVENTS.forEach((event) => $trixEditor.off(event));
   })
 });
+
+TrixEditor.reopenClass({
+  EVENTS: [
+    "trix-blur",
+    "trix-change",
+    "trix-focus",
+    "trix-initialize",
+    "trix-selection-change",
+    "trix-file-accept",
+    "trix-attachment-add",
+    "trix-attachment-remove"
+  ]
+});
+
+export default TrixEditor;
